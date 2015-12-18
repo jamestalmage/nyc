@@ -1,17 +1,13 @@
 /* global __coverage__ */
 var fs = require('fs')
-var glob = require('glob')
 var micromatch = require('micromatch')
-var mkdirp = require('mkdirp')
 var appendTransform = require('append-transform')
 var path = require('path')
-var rimraf = require('rimraf')
 var onExit = require('signal-exit')
-var stripBom = require('strip-bom')
 var resolveFrom = require('resolve-from')
 var md5 = require('md5-hex')
 var arrify = require('arrify')
-var convertSourceMap = require('convert-source-map')
+var convertSourceMap // lazy
 var endsWith = require('ends-with')
 
 /* istanbul ignore next */
@@ -42,8 +38,6 @@ function NYC (opts) {
 
   // require extensions can be provided as config in package.json.
   this.require = arrify(config.require || opts.require)
-
-  this._createOutputDirectory()
 }
 
 NYC.prototype._loadAdditionalModules = function () {
@@ -104,6 +98,7 @@ NYC.prototype._prepGlobPatterns = function (patterns) {
 }
 
 NYC.prototype.addFile = function (filename) {
+  var stripBom = require('strip-bom')
   var relFile = path.relative(this.cwd, filename)
   var source = stripBom(fs.readFileSync(filename, 'utf8'))
   var content = this._addSource(source, filename, relFile)
@@ -126,7 +121,7 @@ NYC.prototype.addAllFiles = function () {
 
   this._createOutputDirectory()
 
-  glob.sync('**/*.js', {nodir: true, ignore: this.exclude}).forEach(function (filename) {
+  require('glob').sync('**/*.js', {nodir: true, ignore: this.exclude}).forEach(function (filename) {
     var obj = _this.addFile(filename, true)
     if (obj.instrument) {
       module._compile(
@@ -155,6 +150,9 @@ NYC.prototype._addSource = function (code, filename, relFile) {
   try {
     return fs.readFileSync(cacheFilePath, 'utf8')
   } catch (e) {
+    if (!convertSourceMap) {
+      convertSourceMap = require('convert-source-map')
+    }
     var sourceMap = convertSourceMap.fromSource(code) || convertSourceMap.fromMapFileSource(code, path.dirname(filename))
     if (sourceMap) {
       var mapPath = path.join(this.cacheDirectory(), hash + '.map')
@@ -175,12 +173,12 @@ NYC.prototype._wrapRequire = function () {
 }
 
 NYC.prototype.cleanup = function () {
-  if (!process.env.NYC_CWD) rimraf.sync(this.tmpDirectory())
-}
-
-NYC.prototype._createOutputDirectory = function () {
-  mkdirp.sync(this.tempDirectory())
-  mkdirp.sync(this.cacheDirectory())
+  if (!process.env.NYC_CWD) {
+    require('rimraf').sync(this.tmpDirectory())
+    var mkdirp = require('mkdirp')
+    mkdirp.sync(this.tempDirectory())
+    mkdirp.sync(this.cacheDirectory())
+  }
 }
 
 NYC.prototype._wrapExit = function () {
