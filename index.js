@@ -35,12 +35,15 @@ function NYC (opts) {
 
   // load exclude stanza from config.
   this.include = false
+  this.includeMatchers = false
   if (config.include) {
     this.include = this._prepGlobPatterns(arrify(config.include))
+    this.includeMatchers = this._compileGlobPatterns(this.include)
   }
 
   this.exclude = ['**/node_modules/**'].concat(arrify(config.exclude || ['test/**', 'test{,-*}.js']))
   this.exclude = this._prepGlobPatterns(this.exclude)
+  this.excludeMatchers = this._compileGlobPatterns(this.exclude)
 
   // require extensions can be provided as config in package.json.
   this.require = arrify(config.require || opts.require)
@@ -105,6 +108,14 @@ NYC.prototype._prepGlobPatterns = function (patterns) {
   return result
 }
 
+NYC.prototype._compileGlobPatterns = function (patterns) {
+  return patterns.map(matcher)
+}
+
+function matcher (pattern) {
+  return micromatch.matcher(pattern)
+}
+
 NYC.prototype.addFile = function (filename) {
   var relFile = path.relative(this.cwd, filename)
   var source = stripBom(fs.readFileSync(filename, 'utf8'))
@@ -119,8 +130,18 @@ NYC.prototype.addFile = function (filename) {
 NYC.prototype.shouldInstrumentFile = function (filename, relFile) {
   relFile = relFile.replace(/^\.\//, '') // remove leading './'.
 
-  return (!this.include || micromatch.any(filename, this.include) || micromatch.any(relFile, this.include)) &&
-    !(micromatch.any(filename, this.exclude) || micromatch.any(relFile, this.exclude))
+  return (!this.includeMatchers || someMatch(this.includeMatchers, filename, relFile)) && !someMatch(this.excludeMatchers, filename, relFile)
+}
+
+function someMatch (matcherList, filename, relFile) {
+  var len = matcherList.length
+  for (var i = 0; i < len; i++) {
+    var matcher = matcherList[i]
+    if (matcher(filename) || matcher(relFile)) {
+      return true
+    }
+  }
+  return false
 }
 
 NYC.prototype.addAllFiles = function () {

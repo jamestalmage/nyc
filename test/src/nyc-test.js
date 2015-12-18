@@ -82,6 +82,7 @@ describe('nyc', function () {
         'test/**',
         'test{,-*}.js'
       ])
+      nyc.excludeMatchers = nyc._compileGlobPatterns(nyc.exclude)
 
       var shouldInstrumentFile = nyc.shouldInstrumentFile.bind(nyc)
 
@@ -133,9 +134,10 @@ describe('nyc', function () {
 
       // Root package contains config.exclude
       // Restore exclude to default patterns
-      nyc.include = nyc._prepGlobPatterns([
+      nyc.include = nyc._compileGlobPatterns([
         'test.js'
       ])
+      nyc.includeMatchers = nyc._compileGlobPatterns(nyc.include)
 
       var shouldInstrumentFile = nyc.shouldInstrumentFile.bind(nyc)
       shouldInstrumentFile('test.js', 'test.js').should.equal(true)
