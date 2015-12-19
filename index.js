@@ -157,8 +157,11 @@ NYC.prototype._maybeInstrumentSource = function (code, filename, relFile) {
   var cacheFilePath = path.join(this.cacheDirectory(), hash + '.js')
 
   try {
-    return fs.readFileSync(cacheFilePath, 'utf8')
+    var ret = fs.readFileSync(cacheFilePath, 'utf8')
+    console.log('cache hit: ', filename)
+    return ret
   } catch (e) {
+    console.log('cache miss: ', filename, ' ', e.message)
     var sourceMap = convertSourceMap.fromSource(code) || convertSourceMap.fromMapFileSource(code, path.dirname(filename))
     if (sourceMap) {
       var mapPath = path.join(this.cacheDirectory(), hash + '.map')

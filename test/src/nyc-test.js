@@ -455,6 +455,12 @@ describe('nyc', function () {
       var nyc = new NYC({cwd: fixtures})
       nyc.clearCache()
 
+      /*var lodashPath = require.resolve('lodash');
+      var targetPath = path.join(fixtures, 'cache-collision-target.js')
+      console.log('copying %s to %s', lodashPath, targetPath)
+      fs.writeFileSync(targetPath, fs.readFileSync(lodashPath))   */
+
+
       var proc = spawn(process.execPath, [bin, process.execPath, './cache-collision-runner.js'], {
         cwd: fixtures,
         env: {},
